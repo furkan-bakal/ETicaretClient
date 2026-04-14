@@ -4,6 +4,8 @@ import { NgxFileDropEntry } from 'ngx-file-drop';
 import { AlertifyService, MessageType, Position } from '../../admin/alertify.service';
 import { CustomToastrService, ToastrMessageType, ToastrPosition } from '../../ui/custom-toastr.service';
 import { HttpClientService } from '../http-client.service';
+import { DialogService } from '../dialog.service';
+import { FileUploadDialogComponent, FileUploadDialogState } from 'src/app/dialogs/file-upload-dialog/file-upload-dialog.component';
 
 @Component({
   selector: 'app-file-upload',
@@ -15,55 +17,63 @@ export class FileUploadComponent {
   public files: NgxFileDropEntry[] = [];
 
   constructor(private httpClientService: HttpClientService,
-              private alertifyService: AlertifyService,
-              private customTostrService: CustomToastrService) {}
+    private alertifyService: AlertifyService,
+    private customTostrService: CustomToastrService,
+    private dialogService: DialogService) { }
 
   public selectedFiles(files: NgxFileDropEntry[]) {
     this.files = files;
     const fileData: FormData = new FormData();
-    for(const file of files) {
+    for (const file of files) {
       (file.fileEntry as FileSystemFileEntry).file((_file: File) => {
         fileData.append(_file.name, _file, file.relativePath);
       });
     }
 
-    const message: string = 'Dosyalar başarıyla yüklenmiştir.';
-      
-    this.httpClientService.post({
-      controller: this.options.controller,
-      action: this.options.action,
-      headers: new HttpHeaders({'responseType': 'blob'})
-    }, fileData).subscribe(data => {
-      const message: string = 'Dosyalar başarıyla yüklenmiştir.';
+    this.dialogService.openDialog({
+      componentType: FileUploadDialogComponent,
+      data: FileUploadDialogState.Yes,
+      afterClosed: () => {
+        this.httpClientService.post({
+          controller: this.options.controller,
+          action: this.options.action,
+          headers: new HttpHeaders({ 'responseType': 'blob' })
+        }, fileData).subscribe(data => {
+          const message: string = 'Dosyalar başarıyla yüklenmiştir.';
 
-      if(this.options.isAdminPage) {
-        this.alertifyService.message(message, {
-          dismissOthers: true,
-          messageType: MessageType.Success,
-          position: Position.TopRight
-        })
-      } else {
-        this.customTostrService.message(message, 'Başarılı', {
-          messageType: ToastrMessageType.Success,
-          position: ToastrPosition.TopRight
-        })
-      }
-    }, (errorResponse: HttpErrorResponse) => {
-     const message: string = 'Dosyalar yüklenirken beklenmedik bir hata ile karşılaşıldı.';
-      
-      if(this.options.isAdminPage) {
-        this.alertifyService.message(message, {
-          dismissOthers: true,
-          messageType: MessageType.Error,
-          position: Position.TopRight
-        })
-      } else {
-        this.customTostrService.message(message, 'Başarısız', {
-          messageType: ToastrMessageType.Error,
-          position: ToastrPosition.TopRight
-        })
-      }
-    });
+          if (this.options.isAdminPage) {
+            this.alertifyService.message(message, {
+              dismissOthers: true,
+              messageType: MessageType.Success,
+              position: Position.TopRight
+            })
+          } else {
+            this.customTostrService.message(message, 'Başarılı', {
+              messageType: ToastrMessageType.Success,
+              position: ToastrPosition.TopRight
+            })
+          }
+        }, (errorResponse: HttpErrorResponse) => {
+          const message: string = 'Dosyalar yüklenirken beklenmedik bir hata ile karşılaşıldı.';
+
+          if (this.options.isAdminPage) {
+            this.alertifyService.message(message, {
+              dismissOthers: true,
+              messageType: MessageType.Error,
+              position: Position.TopRight
+            })
+          } else {
+            this.customTostrService.message(message, 'Başarısız', {
+              messageType: ToastrMessageType.Error,
+              position: ToastrPosition.TopRight
+            })
+          }
+        });
+      },
+    })
+
+
+
   }
 
 }
